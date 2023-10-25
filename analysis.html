@@ -271,6 +271,7 @@
     <div class="associations">
       <div class="title-bar">
         <h2>Category&ndash;card table</h2>
+        <button class="btn-export-result">Export result</button>
       </div>
       <table class="association-table"></table>
     </div>
@@ -690,11 +691,14 @@
             <div class="x-axis-head-text">${asTextContent(renamedCategories[category.name] || category.name)}</div>
           </th>
           `;
+          tableCSV1 += `${asTextContent(renamedCategories[category.name] || category.name)},`;
         }
         tableHtml += '</tr>';
+        tableCSV1 = tableCSV1.slice(0,-1) + '\n';
         for (const card of data.cards) {
           tableHtml += `<tr>`;
           tableHtml += `<th class="y-axis-head-text">${asTextContent(card.text)}</th>`;
+          tableCSV1 += `${asTextContent(card.text)},`;
           for (const category of data.categories) {
             const cardCount = data.cardCountsByCategory[category.name][card.text];
             const cardPercentage = cardCount ? Math.round((cardCount / data.resultCount) * 100.0) : 0;
@@ -710,12 +714,15 @@
                 >${cardPercentage}</div>
               </td>
               `;
+              tableCSV1 += `${cardCount},`;
             }
             else {
               tableHtml += `<td><div class="card-correlation"></div></td>`;
+              tableCSV1 += ' ,';
             }
           }
           tableHtml += '</tr>';
+          tableCSV1 = tableCSV1.slice(0,-1) + '\n';
         }
         tableHtml += '</tbody>';
         // Cards on X-axis, Categories on Y-axis
@@ -735,11 +742,14 @@
             <div class="x-axis-head-text">${asTextContent(card.text)}</div>
           </th>
           `;
+          tableCSV2 += `${asTextContent(card.text)},`;
         }
         tableHtml += '</tr>';
+        tableCSV2 = tableCSV2.slice(0,-1) + '\n';
         for (const category of data.categories) {
           tableHtml += `<tr>`;
           tableHtml += `<th class="y-axis-head-text">${asTextContent(renamedCategories[category.name] || category.name)}</th>`;
+          tableCSV2 += `${asTextContent(renamedCategories[category.name] || category.name)},`;
           for (const card of data.cards) {
             const cardCount = data.cardCountsByCategory[category.name][card.text];
             const cardPercentage = cardCount ? Math.round((cardCount / data.resultCount) * 100.0) : 0;
@@ -755,15 +765,20 @@
                 >${cardPercentage}</div>
               </td>
               `;
+              tableCSV2 += `${cardCount},`;
             }
             else {
               tableHtml += `<td><div class="card-correlation"></div></td>`;
+              tableCSV2 += ' ,';
             }
           }
           tableHtml += '</tr>';
+          tableCSV2 = tableCSV2.slice(0,-1) + '\n';
         }
         tableHtml += '</tbody>';
         associationTable.innerHTML = tableHtml;
+        associationTable.setAttribute("data-content-xCSV",tableCSV1);
+        associationTable.setAttribute("data-content-yCSV",tableCSV2);
       }
 
       function associationTableSwapAxes(button) {
@@ -775,6 +790,28 @@
         else {
           document.querySelector('.association-table .x-categories-y-cards').style.display = 'none';
           document.querySelector('.association-table .x-cards-y-categories').style.display = '';
+        }
+      }
+
+      function exportResult() {
+        if (navigator.clipboard) {
+          let tableCSV = "";
+          const xCardsHidden = document.querySelector('.association-table .x-cards-y-categories').style.display;
+            if (xCardsHidden) {
+              tableCSV = associationTable.getAttribute("data-content-ycsv");
+          } else {
+              tableCSV = associationTable.getAttribute("data-content-xcsv");
+          }
+          navigator.clipboard.writeText(tableCSV);
+          const originalText = buttonExportResult.textContent;
+          buttonExportResult.textContent = 'Data copied to clipboard';
+          clearTimeout(buttonExportResult._textTimeout);
+          buttonExportResult._textTimeout = setTimeout(() => {
+            buttonExportResult.textContent = originalText;
+          }, 5000);
+        }
+        else {
+          prompt('Your browser does not support clipboard. You may try copying the content from below.', serializedData);
         }
       }
     </script>
