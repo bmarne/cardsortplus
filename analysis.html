@@ -308,6 +308,8 @@
       let loadedResults = [];
       resultsInput.addEventListener('input', handleResultsInput);
       const jsonSplitRegex = /\}[^{}]*\{/;
+      const buttonExportResult = document.querySelector('.btn-export-result');
+      buttonExportResult.addEventListener('click', exportResult);
 
       async function handleResultsInput() {
         const text = resultsInput.value;
@@ -674,6 +676,8 @@
 
       function renderAssociationTable(data) {
         let tableHtml = '';
+        let tableCSV1 = '';
+        let tableCSV2 = '';
         // Categories on X-axis, Cards on Y-axis
         tableHtml += '<tbody class="x-categories-y-cards">';
         tableHtml += '<tr>';
