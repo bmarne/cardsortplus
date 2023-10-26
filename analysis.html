@@ -700,6 +700,7 @@
           <button class="associations-button-swap-axes" data-target="x-cards-y-categories">Swap axes</button>
         </th>
         `;
+        tableCSV1 += `Cards,`;
         for (const category of data.categories) {
           tableHtml += `
           <th class="x-axis-head-cell">
@@ -752,6 +753,7 @@
           <button class="associations-button-swap-axes" data-target="x-categories-y-cards">Swap axes</button>
         </th>
         `;
+        tableCSV2 += `Categories,`;
         for (const card of data.cards) {
           const thText = asTextContent(card.text).replace(editedCardRegex,"<div class='oldtext'>$1</div><div class='newtext'>$2</div>");
           tableHtml += `
