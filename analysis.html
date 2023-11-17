@@ -545,7 +545,7 @@
             cardElement.querySelector('.card-correlation').title = `${cardCount}/${data.resultCount} participants`;
             cardElements.push(cardElement);
             // Similarity hover effect
-            const textBase64 = btoa(cardText);
+            const textBase64 = btoa(unescape(encodeURIComponent(cardText)));
             cardElement.setAttribute('data-text-b64', textBase64);
             similarityHoverSelector.push(`.category-refinement .card[data-text-b64="${textBase64}"]`);
             cardElement.addEventListener('mouseover', function handleMouseOver(event) {
