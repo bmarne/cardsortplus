@@ -4,13 +4,13 @@ Card Sort + is a **free and open-source** tool for conducting virtual card sorti
 
 It is most effective when used in conjunction with other tools. For example, you could create a form with instructions, a questionnaire and a link to card sorting. You could also ask the participants to copy the results back into the form.
 
-![Screenshot showing a card sort already started](./images/sort.png)
+[![Screenshot showing a card sort already started](./images/sort_s.png)](./images/sort.png)
 
 Card Sort Allows to:
 
 - Quickly create card to sort from a simple comma separated list of items  
 - Quickly preset some categories (comma-separated list of categories)
-![Screenshot showing how to set cards and categories](./images/set_cards_cats.png)
+[![Screenshot showing how to set cards and categories](./images/set_cards_cats_s.png)](./images/set_cards_cats.png)
 - Choose if cards are randomized or not
 - Choose if users can create new cards or new categories
 - Create a link to share card testing with others. e.g.: [Link example](https://bmarne.codeberg.page/cardsortplus/card-sort.html#eJw9kcFOwzAMhl8FlesuXHdBUGAHNq1ikxBCHNzgtdaSOHITpgnx7iTOOlXK_9lyftvpb3PbLD-bhxAsNousQoZjIYlkRj5qdgogMKSp8A8b-OZMj-DzVwDBq2BUsfamwxBQSmTBHHsUOWuQ8MrCxrCljC30PQyo5CNYTqEGAq5nC5VFx2ohWTpYPql7ixbVrR0vti0b9kkrWcpUrYCfe7bJJNfrzSeIpcfzMASbm2Z8oSGfKxBLpgDzdB12JRDwIIniHGR9pRPNuTXiUcWxV40xmVK0JldkA34ob7ZJ0yjMLuPWk9Zu84C6fAcBzqAgk6dQCMGMVaVKOckjXP5XZ1Px6tjhkH3qUh1HiKVbl1w4UmnyBt80jQpTmLfaBfLVfxcFTnN6z65e3yepY7xnX3Fodd4PcM3Xorlvlnd__zI6t8U=)
