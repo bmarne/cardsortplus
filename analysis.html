@@ -318,7 +318,7 @@
     <script>
       const resultsInput = document.querySelector('#results-input');
       let mergedCategories = {};
-      const renamedCategories = {};
+      var renamedCategories = {};
       let loadedResults = [];
       resultsInput.addEventListener('input', handleResultsInput);
       const jsonSplitRegex = /\}[^{}]*\{/;
@@ -843,6 +843,7 @@
         let sharedData = {};
         sharedData["Cards"] = loadedResults;
         sharedData["Categories"] = mergedCategories;
+        sharedData["RenamedCategories"] = renamedCategories ? renamedCategories : {};
         const dataString = await saveToString(sharedData);
         const baseUrl = window.location.href.replace(regexRemoveBasenameFromUrl, '/');
         const url = baseUrl + 'analysis.html#' + dataString;
@@ -872,6 +873,7 @@
       async function initialize() {
         if (window.location.hash) {
           data = await loadFromString(window.location.hash.split('#').pop());
+          renamedCategories = data["RenamedCategories"] ? data["RenamedCategories"] : {};
           mergedCategories = data["Categories"];
           loadedResults = data["Cards"];
           calculateAndRender();
