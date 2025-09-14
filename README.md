@@ -24,6 +24,7 @@ Card Sort + is a (friendly) soft fork of [Card Sort](https://github.com/indigane
 - Enables users to edit card content (then, the old content is shown as struck through).
 - Enables users to duplicate the cards (then they can sort the cards into several categories).
 - Adds an export button to export refined data provided in the analysis tool to a CSV (copied to the clipboard)
+- Adds a share button to generate a shareable URL with the current state of the analysis (copied to the clipboard)
 
 ## Demo
 

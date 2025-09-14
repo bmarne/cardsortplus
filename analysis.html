@@ -283,6 +283,7 @@
       <div class="title-bar">
         <h2>Category&ndash;card table</h2>
         <button class="btn-export-result">Export result</button>
+        <button class="btn-share-result">Share result</button>
       </div>
       <table class="association-table"></table>
     </div>
@@ -314,7 +315,7 @@
     <script src="common-scripts.js"></script>
     <script>
       const resultsInput = document.querySelector('#results-input');
-      const mergedCategories = {};
+      let mergedCategories = {};
       const renamedCategories = {};
       let loadedResults = [];
       resultsInput.addEventListener('input', handleResultsInput);
@@ -322,6 +323,8 @@
       const editedCardRegex = /^--- (.*?) \+\+\+ (.*?)$/;
       const buttonExportResult = document.querySelector('.btn-export-result');
       buttonExportResult.addEventListener('click', exportResult);
+      const buttonShareResult = document.querySelector('.btn-share-result');
+      buttonShareResult.addEventListener('click', shareResult);
       async function handleResultsInput() {
         const text = resultsInput.value;
         let results = [];
@@ -355,7 +358,6 @@
         }
         if (results.length > 0) {
           resultsInput.value = '';
-          console.log(results);
           addToLoadedResults(results);
         }
       }
@@ -388,7 +390,7 @@
         renderCategoryRefinement(data);
         renderAssociationTable(data);
 
-        console.log(data);
+        console.log('data', data);
       }
 
       function combineResults(results) {
@@ -540,6 +542,7 @@
         similarityHoverEffectStyleElement.innerHTML = '';
         isSimilarityHoverEffectApplied = false;
       });
+      initialize();
 
       function renderCategoryRefinement(data) {
         const categoryElements = [];
@@ -831,6 +834,45 @@
         }
         else {
           prompt('Your browser does not support clipboard. You may try copying the content from below.', serializedData);
+        }
+      }
+      
+      async function shareResult() {
+        let sharedData = {};
+        sharedData["Cards"] = loadedResults;
+        sharedData["Categories"] = mergedCategories;
+        const dataString = await saveToString(sharedData);
+        const baseUrl = window.location.href.replace(regexRemoveBasenameFromUrl, '/');
+        const url = baseUrl + 'analysis.html#' + dataString;
+        if (navigator.share) {
+          navigator.share({
+            title: '',
+            text: '',
+            url: url,
+          });
+        }
+        else if (navigator.clipboard) {
+          navigator.clipboard.writeText(url);
+          const originalText = buttonShareResult.textContent;
+          buttonShareResult.textContent = 'Link copied to clipboard';
+          clearTimeout(buttonShareResult._textTimeout);
+          buttonShareResult._textTimeout = setTimeout(() => {
+            buttonShareResult.textContent = originalText;
+          }, 5000);
+        }
+        else {
+          window.location.href = url;
+          alert('Your browser does not support sharing. Please copy from the address bar instead.');
+        }
+      }
+      
+      
+      async function initialize() {
+        if (window.location.hash) {
+          data = await loadFromString(window.location.hash.split('#').pop());
+          mergedCategories = data["Categories"];
+          loadedResults = data["Cards"];
+          calculateAndRender();
         }
       }
     </script>
