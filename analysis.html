@@ -61,7 +61,7 @@
       }
       .category-refinement .category {
         display: grid;
-        grid-template-columns: 200px 1fr;
+        grid-template-columns: 205px 1fr;
         grid-template-rows: min-content 1fr;
         grid-template-areas:
           "topleft right"
@@ -270,8 +270,8 @@
       <style class="similarity-hover-effect-stylesheet"></style>
       <div class="title-bar">
         <h2>Category refinement</h2>
-        <button>Auto-merge</button>
-        <button class="button-recalculate" disabled>Apply changes</button>
+        <button>🤖 Auto-merge</button>
+        <button class="button-recalculate" disabled>👇 Apply changes</button>
         <label for="similarity-hover-effect-toggle">
           <input type="checkbox" id="similarity-hover-effect-toggle" />
           Similarity highlight on hover
@@ -282,8 +282,8 @@
     <div class="associations">
       <div class="title-bar">
         <h2>Category&ndash;card table</h2>
-        <button class="btn-export-result">Export result</button>
-        <button class="btn-share-result">Share result</button>
+        <button class="btn-share-result">🔗 Share result</button>
+        <button class="btn-export-result">📦 Export result</button>
       </div>
       <table class="association-table"></table>
     </div>
@@ -293,9 +293,9 @@
         <div class="category-cards"></div>
         <div class="merged-categories"></div>
         <div class="category-merge-tool">
-          <button class="category-merge-button-start">Merge this category into...</button>
-          <button class="category-merge-button-end">Merge into here</button>
-          <button class="category-merge-button-cancel">Cancel merge</button>
+          <button class="category-merge-button-start">🫴 Merge this category into...</button>
+          <button class="category-merge-button-end">👉 Merge into here</button>
+          <button class="category-merge-button-cancel">❌ Cancel merge</button>
         </div>
       </div>
     </template>
@@ -700,7 +700,7 @@
           Categories →
           <br />
           Cards ↓
-          <button class="associations-button-swap-axes" data-target="x-cards-y-categories">Swap axes</button>
+          <button class="associations-button-swap-axes" data-target="x-cards-y-categories">🔃 Swap axes</button>
         </th>
         `;
         tableCSV1 += `Cards,`;
@@ -753,7 +753,7 @@
           Cards →
           <br />
           Categories ↓
-          <button class="associations-button-swap-axes" data-target="x-categories-y-cards">Swap axes</button>
+          <button class="associations-button-swap-axes" data-target="x-categories-y-cards">🔄 Swap axes</button>
         </th>
         `;
         tableCSV2 += `Categories,`;
