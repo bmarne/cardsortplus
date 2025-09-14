@@ -536,7 +536,7 @@
         else if (navigator.clipboard) {
           navigator.clipboard.writeText(url);
           const originalText = buttonShareResult.textContent;
-          buttonShareResult.textContent = 'Link copied to clipboard';
+          buttonShareResult.textContent = '📋 Link copied to clipboard';
           clearTimeout(buttonShareResult._textTimeout);
           buttonShareResult._textTimeout = setTimeout(() => {
             buttonShareResult.textContent = originalText;
@@ -561,7 +561,7 @@
         if (navigator.clipboard) {
           navigator.clipboard.writeText(serializedData);
           const originalText = buttonExportResult.textContent;
-          buttonExportResult.textContent = 'Data copied to clipboard';
+          buttonExportResult.textContent = '📋 Data copied to clipboard';
           clearTimeout(buttonExportResult._textTimeout);
           buttonExportResult._textTimeout = setTimeout(() => {
             buttonExportResult.textContent = originalText;

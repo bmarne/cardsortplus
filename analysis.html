@@ -50,7 +50,9 @@
       }
       .category-refinement .title-bar button,
       .category-refinement .title-bar input[type="checkbox"],
-      .category-refinement .title-bar label {
+      .category-refinement .title-bar label,
+      .associations .title-bar button,
+      button.associations-button-swap-axes {
         cursor: pointer;
       }
       .category-refinement .title-bar button[disabled] {
@@ -826,7 +828,7 @@
           }
           navigator.clipboard.writeText(tableCSV);
           const originalText = buttonExportResult.textContent;
-          buttonExportResult.textContent = 'Data copied to clipboard';
+          buttonExportResult.textContent = '📋 Data copied to clipboard';
           clearTimeout(buttonExportResult._textTimeout);
           buttonExportResult._textTimeout = setTimeout(() => {
             buttonExportResult.textContent = originalText;
@@ -854,7 +856,7 @@
         else if (navigator.clipboard) {
           navigator.clipboard.writeText(url);
           const originalText = buttonShareResult.textContent;
-          buttonShareResult.textContent = 'Link copied to clipboard';
+          buttonShareResult.textContent = '📋 Link copied to clipboard';
           clearTimeout(buttonShareResult._textTimeout);
           buttonShareResult._textTimeout = setTimeout(() => {
             buttonShareResult.textContent = originalText;
