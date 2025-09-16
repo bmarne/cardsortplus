@@ -1,6 +1,6 @@
-# Card Sort +
+# Cardsort+
 
-Card Sort + is a **free and open-source** tool for conducting virtual card sorting. It was built as a way to **quickly conduct card sorting online**, without the need to sign up or subscribe to commercial solutions or self-host an open-source project.
+Cardsort+ is a **free and open-source** tool for conducting virtual card sorting. It was built as a way to **quickly conduct card sorting online**, without the need to sign up or subscribe to commercial solutions or self-host an open-source project.
 
 It is most effective when used in conjunction with other tools. For example, you could create a form with instructions, a questionnaire and a link to card sorting. You could also ask the participants to copy the results back into the form.
 
@@ -18,7 +18,7 @@ Card Sort Allows to:
 - Have an overview of the results in a basic but efficient enough visual interface showing them  
 ![Screenshot showing results in a table with a percentage of each answer for each category](./images/results.png)
 
-Card Sort + is a (friendly) soft fork of [Card Sort](https://github.com/indigane/cardsort). It was created to [implement some missing features](https://github.com/indigane/cardsort/pull/6). The new features are:
+Cardsort+ is a (friendly) soft fork of [Card Sort](https://github.com/indigane/cardsort). It was created to [implement some missing features](https://github.com/indigane/cardsort/pull/6). The new features are:
 
 - Allows adding local images with a relative or an absolute file path (Card Sort only allows adding online images with an HTTP path, and embedded images with a data path).
 - Enables users to edit card content (then, the old content is shown as struck through).
