@@ -31,6 +31,22 @@ Card Sort + is a (friendly) soft fork of [Card Sort](https://github.com/indigane
 
 [Test me](https://bmarne.codeberg.page/cardsortplus/card-sort.html#eJw9kcFOwzAMhl8FlesuXHdBUGAHNq1ikxBCHNzgtdaSOHITpgnx7iTOOlXK_9lyftvpb3PbLD-bhxAsNousQoZjIYlkRj5qdgogMKSp8A8b-OZMj-DzVwDBq2BUsfamwxBQSmTBHHsUOWuQ8MrCxrCljC30PQyo5CNYTqEGAq5nC5VFx2ohWTpYPql7ixbVrR0vti0b9kkrWcpUrYCfe7bJJNfrzSeIpcfzMASbm2Z8oSGfKxBLpgDzdB12JRDwIIniHGR9pRPNuTXiUcWxV40xmVK0JldkA34ob7ZJ0yjMLuPWk9Zu84C6fAcBzqAgk6dQCMGMVaVKOckjXP5XZ1Px6tjhkH3qUh1HiKVbl1w4UmnyBt80jQpTmLfaBfLVfxcFTnN6z65e3yepY7xnX3Fodd4PcM3Xorlvlnd__zI6t8U=), then paste the *Exported Results* to [the analysis tool](https://bmarne.codeberg.page/cardsortplus/analysis.html) (you can paste more than one result, they are added to the analysis). 
 
+## Install
+
+You can "install" Cardsort+ in 3 different ways.
+
+1. Do nothing. Just use <https://bmarne.codeberg.page/cardsortplus/>. Your browser will download and run Cardsort+ locally, without sending any data to servers. Cardsort+ is gracefully hosted by Codeberg.org 🙏.
+2. Alternatively, consider downloading the ZIP file from this link: <https://codeberg.org/bmarne/cardsortplus/archive/main.zip>. Then you can open the files with your local browser on any machine. `index.html` creates a card sort URL and `analysis.html` analyses the results.
+3. Alternatively, host your own instance of Cardsort+. Simply transfer the contents of the zip file (<https://codeberg.org/bmarne/cardsortplus/archive/main.zip>) to your personal web server.
+
+## How to use Cardsort+?
+
+3 steps for using Cardsort+
+
+1. Create a test by using the index page (i.e. <https://bmarne.codeberg.page/cardsortplus/>) by listing cards, categories, and switching options, and validating. Then copy the generated link ([Link example](https://bmarne.codeberg.page/cardsortplus/card-sort.html#eJw9kcFOwzAMhl8FlesuXHdBUGAHNq1ikxBCHNzgtdaSOHITpgnx7iTOOlXK_9lyftvpb3PbLD-bhxAsNousQoZjIYlkRj5qdgogMKSp8A8b-OZMj-DzVwDBq2BUsfamwxBQSmTBHHsUOWuQ8MrCxrCljC30PQyo5CNYTqEGAq5nC5VFx2ohWTpYPql7ixbVrR0vti0b9kkrWcpUrYCfe7bJJNfrzSeIpcfzMASbm2Z8oSGfKxBLpgDzdB12JRDwIIniHGR9pRPNuTXiUcWxV40xmVK0JldkA34ob7ZJ0yjMLuPWk9Zu84C6fAcBzqAgk6dQCMGMVaVKOckjXP5XZ1Px6tjhkH3qUh1HiKVbl1w4UmnyBt80jQpTmLfaBfLVfxcFTnN6z65e3yepY7xnX3Fodd4PcM3Xorlvlnd__zI6t8U=)) and send it to your testers.
+2. Use the generated link to take the test with multiple participants. At the end of the sort, click on `Share Results` to generate and automatically copy a link ([Example](https://bmarne.codeberg.page/cardsortplus/card-sort.html#eJxFUcFuwjAM_RXUXbnsymWCbnAYiGogTdO0gxtMG5HEkZsMoWn_vtgFpkp5z4n9_Oz-VGuEYzX7rBZMxpCz1bSqoW2hw-prWu0QD_qKEDRO6CcQDpOjozOyPM2HCAxdHuR9ydkmLXAZW2S-FL2FA3O6B-jcpMEYS3WJIJSvkPk3GTiQsBgdKrI1lFT1vxkna3o6qbl9bsfbBaLmPUhQQ0jgKEfUURh8Sw5GzkVPSHb2OkCJ0KE6q_urxZoMhayZxEGAIdz819lk32rlMyTp8dJ10ZWmhS5tV84VsLNGCNFw38KKIeJR93MNCr7as73drRFPCp6CYkrZSNLaeoENhE4WtMlDz0S-0G2wmrstBjvJaSDCBZTwEGwUhmD6EXkEOW1AuC66cVm0GvLYFZ1xqIYSJOnWZB9PVpq8wcEOvZIh3qbaRRtG_V1iON-u9-TH8n3m0cZ70WWPTv1-gJf_9VTNHn__AI5qzhg=)) into your clipboard. This link will take you to a page displaying all the cards that have been arranged. Save this URL. Then, click on `Export Result` to generate and copy a JSON of the sorted results to the clipboard, which you can then save. Results are more usefull if you take the test with multiple testers.
+3. Go to the analysis page (<https://indigane.github.io/cardsort/analysis.html>) and paste all the JSON you have collected. In the interface, you can merge similar categories. You can then use the table or its CSV export to better understand how testers are sorting the cards.
+
 -----
 
 Analysis tools are in development. If you’re interested, you can take a look at the [current progress](https://indigane.github.io/cardsort/analysis.html) and discuss [in the issues page](https://github.com/indigane/cardsort/issues/2).
