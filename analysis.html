@@ -301,7 +301,7 @@
     </div>
     <div id="dendrogram" class="dendrogram">
       <div class="title-bar">
-        <h2>Card dendrogram</h2>
+        <h2>Card dendrogram (alpha version)</h2>
         <div class="dd-controls">
           <div class="dd-controls-row">
             <label>🗂️ Grouping algorithm:
@@ -311,7 +311,7 @@
                 <option value="average">Average (UPGMA) — AAM (All-Average Merge)</option>
               </select>
             </label>
-            <button id="redraw">🖌️ Draw</button>
+            <button id="redraw">🖌️ Draw</button><button id="exportSvg">📦 Export SVG</button>
           </div>
           <div class="dd-controls-row">
             <label for="kRange">Number of Categories (k):</label>
@@ -926,6 +926,99 @@
           initialK: 4
         }, options);
 
+        
+        function inlineAndExportSVG(filename = 'dendrogram.svg') {
+          const container = document.getElementById(containerId);
+          if (!container) { alert('No container!'); return; }
+          const svg = container.querySelector('svg');
+          if (!svg) { alert('No SVG found to export'); return; }
+
+          // Clone so we don't modify original displayed SVG
+          const clone = svg.cloneNode(true);
+
+          // Ensure namespace attrs
+          clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+          clone.setAttribute('xmlns:xlink', 'http://www.w3.org/1999/xlink');
+
+          // Helper: get computed style and return CSS text for relevant properties
+          function computedStyleToString(el) {
+            const cs = window.getComputedStyle(el);
+            // list of properties commonly needed for SVG visuals; extend if necessary
+            const props = [
+              'fill', 'fill-opacity', 'stroke', 'stroke-width', 'stroke-opacity',
+              'opacity', 'font-size', 'font-family', 'font-weight', 'text-anchor',
+              'visibility', 'display'
+            ];
+            const parts = [];
+            for (const p of props) {
+              const v = cs.getPropertyValue(p);
+              if (v && v !== '' && v !== 'none' && v !== 'rgba(0, 0, 0, 0)' && v !== 'normal') {
+                parts.push(`${p}: ${v};`);
+              }
+            }
+            return parts.join(' ');
+          }
+
+          // Walk DOM tree of clone and inline styles based on the original's computed style
+          const origEls = svg.querySelectorAll('*');
+          const cloneEls = clone.querySelectorAll('*');
+          // include root element too
+          const allOrig = [svg].concat(Array.from(origEls));
+          const allClone = [clone].concat(Array.from(cloneEls));
+
+          for (let i = 0; i < allOrig.length; i++) {
+            const o = allOrig[i];
+            const c = allClone[i];
+            if (!o || !c) continue;
+
+            // Copy presentation attributes that often are set as attributes in original
+            // (e.g., stroke, fill) — if present as attributes on original, keep them; otherwise prefer computed.
+            const styleText = computedStyleToString(o);
+            // Merge with existing inline style on clone (original attributes preserved)
+            const existing = c.getAttribute('style') || '';
+            c.setAttribute('style', (existing + ' ' + styleText).trim());
+
+            // Some SVG viewers don't accept 'class' hooks; removing class helps portability
+            c.removeAttribute('class');
+
+            // Copy dimensions/position attributes that are relevant and might be inherited via CSS
+            const attrsToCopy = ['width','height','viewBox','x','y','cx','cy','r','d','transform','x1','x2','y1','y2'];
+            attrsToCopy.forEach(a => {
+              if (!c.hasAttribute(a) && o.hasAttribute(a)) {
+                c.setAttribute(a, o.getAttribute(a));
+              }
+            });
+          }
+
+          // Optionally inline <style> elements (copy them into the clone)
+          const styleEls = Array.from(document.querySelectorAll('style'));
+          if (styleEls.length) {
+            const styleText = styleEls.map(s => s.textContent).join('\n');
+            if (styleText.trim()) {
+              const styleNode = document.createElementNS('http://www.w3.org/2000/svg', 'style');
+              styleNode.textContent = styleText;
+              // prepend so rules apply
+              clone.insertBefore(styleNode, clone.firstChild);
+            }
+          }
+
+          // Serialize
+          const serializer = new XMLSerializer();
+          let source = serializer.serializeToString(clone);
+          if (!source.match(/^<\?xml/)) source = '<?xml version="1.0" standalone="no"?>\n' + source;
+
+          const blob = new Blob([source], { type: 'image/svg+xml;charset=utf-8' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = filename;
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+          setTimeout(() => URL.revokeObjectURL(url), 1000);
+        }
+        
+        
         // --- CSV parse ---
         function parseCSV(text){
           const lines = text.trim().split(/\r?\n/).map(l=>l.trim()).filter(Boolean);
@@ -1360,6 +1453,8 @@
           updateKMax();
           render(linkageSelect.value, Number(kRange.value));
         });
+        
+        document.getElementById('exportSvg').addEventListener('click', () => inlineAndExportSVG('dendrogram.svg'));
 
         // initial render
         linkageSelect.value = cfg.initialLinkage || linkageSelect.value;
