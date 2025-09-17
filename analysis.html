@@ -256,7 +256,7 @@
         height: 28px;
         overflow: hidden;
       }
-      
+
       .link { stroke:#6666ff; fill:none; stroke-width:1.5; }
       .legend { margin-left:8px; display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
       .legend .item { display:flex; gap:6px; align-items:center;}
@@ -265,10 +265,11 @@
       #kValue { font-weight:600; margin-left:0.5em; }
       input[type="range"] { vertical-align:middle; }
       .editable-input { padding:2px 4px; }
+      button#redraw {display:none;}
     </style>
   </head>
   <body>
-    <div class="results-input-container">
+    <div id="results-input-container" class="results-input-container">
       <div class="title-bar">
         <h2>Data input</h2>
       </div>
@@ -277,7 +278,7 @@
       </div>
       <textarea id="results-input"></textarea>
     </div>
-    <div class="category-refinement">
+    <div id="category-refinement" class="category-refinement">
       <style class="similarity-hover-effect-stylesheet"></style>
       <div class="title-bar">
         <h2>Category refinement</h2>
@@ -290,7 +291,7 @@
       </div>
       <div class="categories"></div>
     </div>
-    <div class="associations">
+    <div id="associations" class="associations">
       <div class="title-bar">
         <h2>Category&ndash;card table</h2>
         <button class="btn-share-result">🔗 Share result</button>
@@ -298,12 +299,12 @@
       </div>
       <table class="association-table"></table>
     </div>
-    <div class="dendrogram">
+    <div id="dendrogram" class="dendrogram">
       <div class="title-bar">
         <h2>Card dendrogram</h2>
         <div class="dd-controls">
           <div class="dd-controls-row">
-            <label>🗂️ Linkage:
+            <label>🗂️ Grouping algorithm:
               <select id="linkageSelect">
                 <option value="single">Single (min) — SMM (Single Merge)</option>
                 <option value="complete">Complete (max) — BMM (Best-Max Merge)</option>
@@ -425,7 +426,7 @@
 
         renderCategoryRefinement(data);
         renderAssociationTable(data);
-        
+
         renderDendrogram(csv);
 
         console.log('data', data);
@@ -916,7 +917,7 @@
           calculateAndRender();
         }
       }
-      
+
       function renderDendrogram(csvText, containerId = "dd-container", options = {}) {
         const cfg = Object.assign({
           width: Math.max(document.documentElement.clientWidth || 0, window.innerWidth || 0)*90/100,
@@ -1224,6 +1225,31 @@
             label.textContent = val;
             svg.appendChild(label);
           }
+          
+
+          // --- DRAW THRESHOLD LINE IF PROVIDED ---
+          if(typeof opts.thresholdX !== 'undefined'){
+            const tx = opts.thresholdX;
+            const thrLine = document.createElementNS(svgNS,'line');
+            thrLine.setAttribute('x1', tx);
+            thrLine.setAttribute('x2', tx);
+            thrLine.setAttribute('y1', margin.top - 8);
+            thrLine.setAttribute('y2', h - margin.bottom + 6);
+            thrLine.setAttribute('stroke', '#d62728');
+            thrLine.setAttribute('stroke-width', '2');
+            thrLine.setAttribute('stroke-dasharray', '6,4');
+            thrLine.setAttribute('opacity', '0.9');
+            svg.appendChild(thrLine);
+
+            if(typeof opts.thresholdVal !== 'undefined'){
+              const tlabel = document.createElementNS(svgNS,'text');
+              tlabel.setAttribute('x', tx + 6);
+              tlabel.setAttribute('y', margin.top + 12);
+              tlabel.setAttribute('fill','#d62728');
+              tlabel.textContent = `Threshold: ${Math.round(opts.thresholdVal*100)/100}`;
+              svg.appendChild(tlabel);
+            }
+          }
         }
 
         const kRange = document.getElementById('kRange');
@@ -1245,6 +1271,24 @@
           const clusterRoots = cutTree(layout.root, k);
           const clusterMap = assignClusterIds(layout.root, clusterRoots);
 
+          // threshold
+          const merges = collectMerges(layout.root).map(m=>m.height).sort((a,b)=>b-a);
+          let thresholdVal = 0;
+          if(k <= 1){
+            thresholdVal = layout.maxH;
+          } else if(k >= layout.leaves.length){
+            thresholdVal = 0;
+          } else {
+            const idx = Math.min(merges.length-1, k-2);
+            thresholdVal = merges[idx] || 0;
+          }
+
+          const w = cfg.width;
+          const margin = {top:40,right:20,bottom:20,left:220};
+          const innerW = w - margin.left - margin.right;
+          const tx = margin.left + (thresholdVal / layout.maxH) * innerW;
+          
+          
           // legend
           const legend = document.getElementById('legend');
           legend.innerHTML = '<h3>Categories</h3>';
@@ -1294,7 +1338,12 @@
             legend.appendChild(sw);
           }
 
-          drawDendrogram(containerId, layout, items, clusterMap, {width: cfg.width, height: Math.max(420, layout.leaves.length*cfg.heightPerLeaf)});
+          drawDendrogram(containerId, layout, items, clusterMap, {
+            width: cfg.width,
+            height: Math.max(420, layout.leaves.length*cfg.heightPerLeaf),
+            thresholdX: tx,
+            thresholdVal: thresholdVal
+          });
         }
 
         kRange.addEventListener('input', ()=>{
