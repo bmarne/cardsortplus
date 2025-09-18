@@ -306,9 +306,18 @@
           <div class="dd-controls-row">
             <label>🗂️ Grouping algorithm:
               <select id="linkageSelect">
-                <option value="single">Single (min) — SMM (Single Merge)</option>
-                <option value="complete">Complete (max) — BMM (Best-Max Merge)</option>
-                <option value="average">Average (UPGMA) — AAM (All-Average Merge)</option>
+                <option value="single">Single (min)</option>
+                <option value="complete">Complete (max)</option>
+                <option value="average">Average (UPGMA)</option>
+              </select>
+            </label>
+            <label>📏 Distance algorithm:
+              <select id="distSelect">
+                <option value="jaccardDistance">Jaccard</option>
+                <option value="brayCurtisDistance">Bray-Curtis</option>
+                <option value="manhattanDistance">Manhattan</option>
+                <option value="euclideanDistance">Euclidean</option>
+                <option value="cosineDistance">Cosine</option>
               </select>
             </label>
             <button id="redraw">🖌️ Draw</button><button id="exportSvg">📦 Export SVG</button>
@@ -923,10 +932,11 @@
           width: Math.max(document.documentElement.clientWidth || 0, window.innerWidth || 0)*90/100,
           heightPerLeaf: 22,
           initialLinkage: 'average',
-          initialK: 4
+          initialK: 4,
+          distanceFn:brayCurtisDistance,
         }, options);
 
-        
+
         function inlineAndExportSVG(filename = 'dendrogram.svg') {
           const container = document.getElementById(containerId);
           if (!container) { alert('No container!'); return; }
@@ -1017,8 +1027,8 @@
           a.remove();
           setTimeout(() => URL.revokeObjectURL(url), 1000);
         }
-        
-        
+
+
         // --- CSV parse ---
         function parseCSV(text){
           const lines = text.trim().split(/\r?\n/).map(l=>l.trim()).filter(Boolean);
@@ -1040,6 +1050,29 @@
           return { name, vec, origIndex: idx };
         });
 
+        normalizeData(items);
+
+        // Usefull ?
+        function normalizeData(items) {
+          const featureCount = items[0].vec.length;
+          const maxValues = new Array(featureCount).fill(0);
+
+          // max val for each cat.
+          items.forEach(item => {
+            item.vec.forEach((value, index) => {
+              if (value > maxValues[index]) {
+                maxValues[index] = value;
+              }
+            });
+          });
+
+          // norm vect.
+          items.forEach(item => {
+            item.vec = item.vec.map((value, index) => maxValues[index] > 0 ? value / maxValues[index] : 0);
+          });
+        }
+
+
         // --- Jaccard Distance  ---
         function jaccardDistance(a,b){
           let inter=0, uni=0;
@@ -1049,19 +1082,71 @@
           }
           return uni===0 ? 1 : 1 - (inter/uni);
         }
+        // --- Bray-Curtis Distance ---
+        function brayCurtisDistance(a, b) {
+          let sumAbsDiff = 0;
+          let sumAbs = 0;
+
+          for (let i = 0; i < a.length; i++) {
+            sumAbsDiff += Math.abs(a[i] - b[i]);
+            sumAbs += a[i] + b[i];
+          }
+
+          return sumAbs === 0 ? 0 : sumAbsDiff / sumAbs;
+        }
+        // --- Euclidienne Distance ---
+        function euclideanDistance(a, b) {
+          let sum = 0;
+          for (let i = 0; i < a.length; i++) {
+            sum += Math.pow(a[i] - b[i], 2);
+          }
+          return Math.sqrt(sum);
+        }
+        // ---Manhattan Distance ---
+        function manhattanDistance(a, b) {
+          let sum = 0;
+          for (let i = 0; i < a.length; i++) {
+            sum += Math.abs(a[i] - b[i]);
+          }
+          return sum;
+        }
+        // --- Cosine Distance ---
+        function cosineDistance(a, b) {
+          let dotProduct = 0;
+          let normA = 0;
+          let normB = 0;
+
+          for (let i = 0; i < a.length; i++) {
+            dotProduct += a[i] * b[i];
+            normA += Math.pow(a[i], 2);
+            normB += Math.pow(b[i], 2);
+          }
+
+          const denominator = Math.sqrt(normA) * Math.sqrt(normB);
+          return denominator === 0 ? 1 : 1 - (dotProduct / denominator);
+        }
+
+
 
         // --- Agglomerative clustering ---
         function agglomerative(items, distanceFn, linkage='single'){
+          // Usefull ?
+          if (items.length === 0) return null; // no elements
+          if (items.length === 1) return { id: 'n0', members: [0], size: 1, children: null, height: 0, name: items[0].name, index: 0 }; // only one element
+
           const clusters = items.map((it, idx) => ({
             id: 'n'+idx, members: [idx], size:1, children: null, height: 0, name: it.name, index: idx
           }));
           const n0 = clusters.length;
           let dist = Array.from({length:n0},()=>Array(n0).fill(Infinity));
+
+          // computing distances
           for(let i=0;i<n0;i++){
             for(let j=i+1;j<n0;j++){
               dist[i][j] = dist[j][i] = distanceFn(items[i].vec, items[j].vec);
             }
           }
+
           const active = new Set(Array.from({length:n0},(_,i)=>i));
           let currentIndex = n0;
           function findMinPair(){
@@ -1090,6 +1175,9 @@
               index: currentIndex
             };
             clusters.push(newCluster);
+
+
+
             for(let i=0;i<dist.length;i++) dist[i].push(Infinity);
             dist.push(Array(dist.length+1).fill(Infinity));
             for(const i of active){
@@ -1290,7 +1378,6 @@
           }
           if(typeof cid !== 'undefined'){
             text.setAttribute('fill', getColor(cid));
-            //text.setAttribute('font-weight','600');
           } else {
             text.setAttribute('fill','#000');
           }
@@ -1350,7 +1437,7 @@
         const linkageSelect = document.getElementById('linkageSelect');
 
         function updateKMax(){
-          const tree = agglomerative(items, jaccardDistance, linkageSelect.value);
+          const tree = agglomerative(items, cfg.distanceFn, linkageSelect.value);
           const layout = layoutTree(tree);
           const maxK = layout.leaves.length;
           kRange.max = maxK;
@@ -1359,7 +1446,7 @@
         }
 
         function render(linkage, k){
-          const tree = agglomerative(items, jaccardDistance, linkage);
+          const tree = agglomerative(items, cfg.distanceFn, linkage);
           const layout = layoutTree(tree);
           const clusterRoots = cutTree(layout.root, k);
           const clusterMap = assignClusterIds(layout.root, clusterRoots);
@@ -1454,10 +1541,18 @@
           render(linkageSelect.value, Number(kRange.value));
         });
         
+
+        distSelect.addEventListener('change', ()=>{
+          cfg.distanceFn = eval(distSelect.value);
+          updateKMax();
+          render(linkageSelect.value, Number(kRange.value));
+        });
+
         document.getElementById('exportSvg').addEventListener('click', () => inlineAndExportSVG('dendrogram.svg'));
 
         // initial render
         linkageSelect.value = cfg.initialLinkage || linkageSelect.value;
+        distSelect.value = cfg.distanceFn.name || distSelect.value;
         kRange.value = Math.min(Number(kRange.max), cfg.initialK || Number(kRange.value));
         updateKMax();
         render(linkageSelect.value, Number(kRange.value));
