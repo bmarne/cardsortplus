@@ -272,6 +272,8 @@
       input[type="range"] { vertical-align:middle; }
       .editable-input { padding:2px 4px; }
       button#redraw {display:none;}
+      .legend-title * {display: inline}
+      input#labelNum {width: 3em}
     </style>
   </head>
   <body>
@@ -332,6 +334,11 @@
             <label for="kRange">Number of Categories (k):</label>
             <input id="kRange" type="range" min="1" max="15" value="3" step="1" />
             <span id="kValue">3</span>
+            <div class="legend-title">
+              <h3>Categories</h3>
+              (<label for="labelNum">Number of categories used for labels below: </label>
+              <input id="labelNum" type="number" name="number" value="2"/>)
+            </div>
             <div class="legend" id="legend"></div>
           </div>
         </div>
@@ -940,6 +947,7 @@
           initialLinkage: 'average',
           initialK: 4,
           distanceFn:brayCurtisDistance,
+          labelNum: 2,
         }, options);
         const DISTANCE_FUNCS = {
           'brayCurtisDistance': brayCurtisDistance,
@@ -1465,7 +1473,7 @@
           
           // legend
           const legend = document.getElementById('legend');
-          legend.innerHTML = '<h3>Categories</h3>';
+          legend.innerHTML = '';
           for(let i=0;i<clusterRoots.length;i++){
             const sw = document.createElement('span');
             sw.className = 'item';
@@ -1475,7 +1483,7 @@
             sw.appendChild(cb);
 
             const cnt = (function countLeaves(n){ if(!n.children) return 1; return countLeaves(n.children[0]) + countLeaves(n.children[1]); })(clusterRoots[i]);
-            const autoLabel = computeClusterLabel(clusterRoots[i], 2);
+            const autoLabel = computeClusterLabel(clusterRoots[i], cfg.labelNum);
 
             const labelText = document.createElement('span');
             labelText.textContent = `C${i+1} (${cnt}) — ${autoLabel}`;
@@ -1535,6 +1543,11 @@
           render(linkageSelect.value, Number(kRange.value));
         });
         
+        labelNum.addEventListener('change', ()=>{
+          cfg.labelNum = labelNum.value;
+          updateKMax();
+          render(linkageSelect.value, Number(kRange.value));
+        });
 
         distSelect.addEventListener('change', ()=>{
           const key = distSelect.value;
@@ -1552,6 +1565,7 @@
         // initial render
         linkageSelect.value = cfg.initialLinkage || linkageSelect.value;
         distSelect.value = cfg.distanceFn.name || distSelect.value;
+        labelNum.value = cfg.labelNum || labelNum.value;
         kRange.value = Math.min(Number(kRange.max), cfg.initialK || Number(kRange.value));
         updateKMax();
         render(linkageSelect.value, Number(kRange.value));
