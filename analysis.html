@@ -987,8 +987,6 @@
             const c = allClone[i];
             if (!o || !c) continue;
 
-            // Copy presentation attributes that often are set as attributes in original
-            // (e.g., stroke, fill) — if present as attributes on original, keep them; otherwise prefer computed.
             const styleText = computedStyleToString(o);
             // Merge with existing inline style on clone (original attributes preserved)
             const existing = c.getAttribute('style') || '';
@@ -997,7 +995,6 @@
             // Some SVG viewers don't accept 'class' hooks; removing class helps portability
             c.removeAttribute('class');
 
-            // Copy dimensions/position attributes that are relevant and might be inherited via CSS
             const attrsToCopy = ['width','height','viewBox','x','y','cx','cy','r','d','transform','x1','x2','y1','y2'];
             attrsToCopy.forEach(a => {
               if (!c.hasAttribute(a) && o.hasAttribute(a)) {
