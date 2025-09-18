@@ -1049,31 +1049,12 @@
         const featureNames = parsed.header.slice(1);
         const items = parsed.rows.map((r, idx) => {
           const name = r[parsed.header[0]];
-          const vec = featureNames.map(f => Number(r[f]) > 0 ? 1 : 0);
+          const vec = featureNames.map(f => {
+            const v = parseFloat(r[f]);
+            return Number.isFinite(v) ? v : 0;
+          });
           return { name, vec, origIndex: idx };
         });
-
-        normalizeData(items);
-
-        // Usefull ?
-        function normalizeData(items) {
-          const featureCount = items[0].vec.length;
-          const maxValues = new Array(featureCount).fill(0);
-
-          // max val for each cat.
-          items.forEach(item => {
-            item.vec.forEach((value, index) => {
-              if (value > maxValues[index]) {
-                maxValues[index] = value;
-              }
-            });
-          });
-
-          // norm vect.
-          items.forEach(item => {
-            item.vec = item.vec.map((value, index) => maxValues[index] > 0 ? value / maxValues[index] : 0);
-          });
-        }
 
 
         // --- Jaccard Distance  ---
@@ -1133,9 +1114,6 @@
 
         // --- Agglomerative clustering ---
         function agglomerative(items, distanceFn, linkage='single'){
-          // Usefull ?
-          if (items.length === 0) return null; // no elements
-          if (items.length === 1) return { id: 'n0', members: [0], size: 1, children: null, height: 0, name: items[0].name, index: 0 }; // only one element
 
           const clusters = items.map((it, idx) => ({
             id: 'n'+idx, members: [idx], size:1, children: null, height: 0, name: it.name, index: idx
@@ -1294,26 +1272,32 @@
           return palette[i % palette.length];
         }
 
-        function computeClusterLabel(clusterNode, maxAttrs=2){
-          const counts = {};
-          featureNames.forEach(f => counts[f] = 0);
-          (function collect(n){
-            if(!n.children){
+        function computeClusterLabel(clusterNode, maxAttrs = 2) {
+          const counts = new Array(featureNames.length).fill(0);
+
+          (function collect(n) {
+            if (!n.children) {
               n.members.forEach(mi => {
-                featureNames.forEach((f,fi) => {
-                  if(Number(parsed.rows[mi][f]) > 0) counts[f]++;
-                });
+                const vec = items[mi].vec;
+                for (let fi = 0; fi < vec.length; fi++) {
+                  if (Number.isFinite(vec[fi]) && vec[fi] > 0) counts[fi] += Math.max(0, vec[fi]);
+                }
               });
               return;
             }
             collect(n.children[0]);
             collect(n.children[1]);
           })(clusterNode);
-          const arr = Object.entries(counts).sort((a,b)=> b[1]-a[1]);
-          const top = arr.filter(a=>a[1]>0).slice(0,maxAttrs).map(a=>a[0]);
-          if(top.length === 0) return '—';
+
+          const arr = featureNames.map((f, fi) => [f, counts[fi]])
+                                .filter(([f, c]) => c > 0)
+                                .sort((a, b) => b[1] - a[1]);
+
+          if (arr.length === 0) return '—';
+          const top = arr.slice(0, maxAttrs).map(a => a[0]);
           return top.join(', ');
         }
+
 
         // draw function (uses clusterMap for badges)
         function drawDendrogram(containerId, layout, items, clusterMap = {}, opts = {}){
