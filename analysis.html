@@ -941,6 +941,13 @@
           initialK: 4,
           distanceFn:brayCurtisDistance,
         }, options);
+        const DISTANCE_FUNCS = {
+          'brayCurtisDistance': brayCurtisDistance,
+          'jaccardDistance': jaccardDistance,
+          'euclideanDistance': euclideanDistance,
+          'manhattanDistance': manhattanDistance,
+          'cosineDistance': cosineDistance
+        };
 
 
         function inlineAndExportSVG(filename = 'dendrogram.svg') {
@@ -1530,7 +1537,12 @@
         
 
         distSelect.addEventListener('change', ()=>{
-          cfg.distanceFn = eval(distSelect.value);
+          const key = distSelect.value;
+          if (DISTANCE_FUNCS.hasOwnProperty(key)) {
+            cfg.distanceFn = DISTANCE_FUNCS[key];
+          } else {
+            console.warn('Unknown distance algorithm:', key);
+          }
           updateKMax();
           render(linkageSelect.value, Number(kRange.value));
         });
