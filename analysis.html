@@ -449,7 +449,7 @@
         renderCategoryRefinement(data);
         renderAssociationTable(data);
 
-        renderDendrogram(csv);
+        renderDendrogramFromJSON(loadedResults);
 
         console.log('data', data);
       }
@@ -936,19 +936,21 @@
           renamedCategories = data["RenamedCategories"] ? data["RenamedCategories"] : {};
           mergedCategories = data["Categories"];
           loadedResults = data["Cards"];
+          console.log(loadedResults)
           calculateAndRender();
         }
       }
 
-      function renderDendrogram(csvText, containerId = "dd-container", options = {}) {
+      function renderDendrogramFromJSON(jsonVotes, containerId = "dd-container", options = {}) {
         const cfg = Object.assign({
-          width: Math.max(document.documentElement.clientWidth || 0, window.innerWidth || 0)*90/100,
+          width: Math.max(document.documentElement.clientWidth || 0, window.innerWidth || 0) * 90 / 100,
           heightPerLeaf: 22,
           initialLinkage: 'average',
           initialK: 4,
-          distanceFn:brayCurtisDistance,
+          distanceFn: brayCurtisDistance,
           labelNum: 2,
         }, options);
+
         const DISTANCE_FUNCS = {
           'brayCurtisDistance': brayCurtisDistance,
           'jaccardDistance': jaccardDistance,
@@ -957,7 +959,7 @@
           'cosineDistance': cosineDistance
         };
 
-
+        // Export SVG
         function inlineAndExportSVG(filename = 'dendrogram.svg') {
           const container = document.getElementById(containerId);
           if (!container) { alert('No container!'); return; }
@@ -1044,125 +1046,129 @@
           a.click();
           a.remove();
           setTimeout(() => URL.revokeObjectURL(url), 1000);
+          
         }
 
-
-        // --- CSV parse ---
-        function parseCSV(text){
-          const lines = text.trim().split(/\r?\n/).map(l=>l.trim()).filter(Boolean);
-          const header = lines.shift().split(',').map(h=>h.trim());
-          const rows = lines.map(line => {
-            const cols = line.split(',').map(c=>c.trim());
-            const obj = {};
-            header.forEach((h,i)=> obj[h] = cols[i]);
-            return obj;
+        
+        // --- Transform JSON votes -> matrix (items = cards, features = categories) -
+        // 1) Collect the universe of cards and categories.
+        const cardSet = new Set();
+        const catSet = new Set();
+        // Iterate each participant's vote object: { categoryName: string[] }
+        jsonVotes.forEach(voteObj => {
+          Object.entries(voteObj || {}).forEach(([cat, cards]) => {
+            if (!cat) return;
+            catSet.add(cat);
+            (Array.isArray(cards) ? cards : []).forEach(c => { if (c) cardSet.add(c); });
           });
-          return { header, rows };
-        }
+        });
+        const featureNames = Array.from(catSet);      // columns = categories
+        const cardNames = Array.from(cardSet);        // rows = cards
 
-        const parsed = parseCSV(csvText);
-        const featureNames = parsed.header.slice(1);
-        const items = parsed.rows.map((r, idx) => {
-          const name = r[parsed.header[0]];
-          const vec = featureNames.map(f => {
-            const v = parseFloat(r[f]);
-            return Number.isFinite(v) ? v : 0;
+        // 2) Build a map card -> feature vector (counts per category aggregated across participants).
+        const cardIndex = new Map(cardNames.map((c, i) => [c, i]));
+        const catIndex = new Map(featureNames.map((c, i) => [c, i]));
+        const M = cardNames.length;
+        const F = featureNames.length;
+        const matrix = Array.from({ length: M }, () => new Array(F).fill(0));
+
+        // 3) Fill counts: for every participant, for each category, increment that category for listed cards.
+        jsonVotes.forEach(voteObj => {
+          Object.entries(voteObj || {}).forEach(([cat, cards]) => {
+            const fi = catIndex.get(cat);
+            if (fi == null) return;
+            (Array.isArray(cards) ? cards : []).forEach(card => {
+              const ri = cardIndex.get(card);
+              if (ri != null) {
+                // Increment count :Participants can pick same card multiple times in one cat
+                matrix[ri][fi] += 1;
+              }
+            });
           });
-          return { name, vec, origIndex: idx };
         });
 
+        // 4) Create items array used by the clustering pipeline.
+        const items = cardNames.map((name, idx) => ({
+          name, vec: matrix[idx].map(v => Number.isFinite(v) ? v : 0), origIndex: idx
+        }));
 
-        // --- Jaccard Distance  ---
-        function jaccardDistance(a,b){
-          let inter=0, uni=0;
-          for(let i=0;i<a.length;i++){
-            if(a[i]===1 || b[i]===1) uni++;
-            if(a[i]===1 && b[i]===1) inter++;
+        //  --- Jaccard Distance  ---
+        function jaccardDistance(a, b) {
+          let inter = 0, uni = 0;
+          for (let i = 0; i < a.length; i++) {
+            const ai = a[i] > 0 ? 1 : 0;
+            const bi = b[i] > 0 ? 1 : 0;
+            if (ai === 1 || bi === 1) uni++;
+            if (ai === 1 && bi === 1) inter++;
           }
-          return uni===0 ? 1 : 1 - (inter/uni);
+          return uni === 0 ? 1 : 1 - (inter / uni);
         }
-        // --- Bray-Curtis Distance ---
+        // --- Bray-Curtis Distance ---/proportion vectors (robust for compositional data).
         function brayCurtisDistance(a, b) {
-          let sumAbsDiff = 0;
-          let sumAbs = 0;
-
+          let sumAbsDiff = 0, sumAbs = 0;
           for (let i = 0; i < a.length; i++) {
             sumAbsDiff += Math.abs(a[i] - b[i]);
             sumAbs += a[i] + b[i];
           }
-
           return sumAbs === 0 ? 0 : sumAbsDiff / sumAbs;
         }
         // --- Euclidienne Distance ---
         function euclideanDistance(a, b) {
           let sum = 0;
-          for (let i = 0; i < a.length; i++) {
-            sum += Math.pow(a[i] - b[i], 2);
-          }
+          for (let i = 0; i < a.length; i++) sum += Math.pow(a[i] - b[i], 2);
           return Math.sqrt(sum);
         }
         // ---Manhattan Distance ---
         function manhattanDistance(a, b) {
           let sum = 0;
-          for (let i = 0; i < a.length; i++) {
-            sum += Math.abs(a[i] - b[i]);
-          }
+          for (let i = 0; i < a.length; i++) sum += Math.abs(a[i] - b[i]);
           return sum;
         }
         // --- Cosine Distance ---
         function cosineDistance(a, b) {
-          let dotProduct = 0;
-          let normA = 0;
-          let normB = 0;
-
+          let dot = 0, na = 0, nb = 0;
           for (let i = 0; i < a.length; i++) {
-            dotProduct += a[i] * b[i];
-            normA += Math.pow(a[i], 2);
-            normB += Math.pow(b[i], 2);
+            dot += a[i] * b[i];
+            na += a[i] * a[i];
+            nb += b[i] * b[i];
           }
-
-          const denominator = Math.sqrt(normA) * Math.sqrt(normB);
-          return denominator === 0 ? 1 : 1 - (dotProduct / denominator);
+          const denom = Math.sqrt(na) * Math.sqrt(nb);
+          return denom === 0 ? 1 : 1 - (dot / denom);
         }
 
-
-
-        // --- Agglomerative clustering ---
-        function agglomerative(items, distanceFn, linkage='single'){
-
+        // --- Agglomerative clustering (single/complete/average linkage) -----------
+        function agglomerative(items, distanceFn, linkage = 'single') {
           const clusters = items.map((it, idx) => ({
-            id: 'n'+idx, members: [idx], size:1, children: null, height: 0, name: it.name, index: idx
+            id: 'n' + idx, members: [idx], size: 1, children: null, height: 0, name: it.name, index: idx
           }));
           const n0 = clusters.length;
-          let dist = Array.from({length:n0},()=>Array(n0).fill(Infinity));
+          let dist = Array.from({ length: n0 }, () => Array(n0).fill(Infinity));
 
           // computing distances
-          for(let i=0;i<n0;i++){
-            for(let j=i+1;j<n0;j++){
+          for (let i = 0; i < n0; i++) {
+            for (let j = i + 1; j < n0; j++) {
               dist[i][j] = dist[j][i] = distanceFn(items[i].vec, items[j].vec);
             }
           }
-
-          const active = new Set(Array.from({length:n0},(_,i)=>i));
+          const active = new Set(Array.from({ length: n0 }, (_, i) => i));
           let currentIndex = n0;
-          function findMinPair(){
-            let mi=Infinity, a=-1,b=-1;
-            for(const i of active){
-              for(const j of active){
-                if(i>=j) continue;
-                if(dist[i][j] < mi){
-                  mi = dist[i][j]; a=i; b=j;
-                }
+          function findMinPair() {
+            let mi = Infinity, a = -1, b = -1;
+            for (const i of active) {
+              for (const j of active) {
+                if (i >= j) continue;
+                if (dist[i][j] < mi) { mi = dist[i][j]; a = i; b = j; }
               }
             }
-            return (a===-1) ? null : {a,b,d:mi};
+            return (a === -1) ? null : { a, b, d: mi };
           }
-          while(active.size > 1){
+
+          while (active.size > 1) {
             const pair = findMinPair();
-            if(!pair) break;
-            const {a,b,d} = pair;
+            if (!pair) break;
+            const { a, b, d } = pair;
             const newCluster = {
-              id: 'n'+currentIndex,
+              id: 'n' + currentIndex,
               members: clusters[a].members.concat(clusters[b].members),
               size: clusters[a].size + clusters[b].size,
               children: [clusters[a], clusters[b]],
@@ -1171,24 +1177,21 @@
               index: currentIndex
             };
             clusters.push(newCluster);
+            for (let i = 0; i < dist.length; i++) dist[i].push(Infinity);
+            dist.push(Array(dist.length + 1).fill(Infinity));
 
-
-
-            for(let i=0;i<dist.length;i++) dist[i].push(Infinity);
-            dist.push(Array(dist.length+1).fill(Infinity));
-            for(const i of active){
-              if(i===a || i===b) continue;
+            for (const i of active) {
+              if (i === a || i === b) continue;
               let dnew;
-              if(linkage === 'single'){
+              if (linkage === 'single') {
                 dnew = Math.min(dist[i][a], dist[i][b]);
-              } else if(linkage === 'complete'){
+              } else if (linkage === 'complete') {
                 dnew = Math.max(dist[i][a], dist[i][b]);
               } else {
-                const da = dist[i][a];
-                const db = dist[i][b];
-                const sa = clusters[a].size;
-                const sb = clusters[b].size;
-                dnew = (da*sa + db*sb) / (sa + sb);
+                // Average linkage (UPGMA): size-weighted average of distances
+                const da = dist[i][a], db = dist[i][b];
+                const sa = clusters[a].size, sb = clusters[b].size;
+                dnew = (da * sa + db * sb) / (sa + sb);
               }
               dist[i][currentIndex] = dist[currentIndex][i] = dnew;
             }
@@ -1202,94 +1205,86 @@
         }
 
         // --- Layout computation ---
-        function layoutTree(root){
+        function layoutTree(root) {
           const leaves = [];
-          (function collect(node){
-            if(!node.children) { leaves.push(node); return; }
+          (function collect(node) {
+            if (!node.children) { leaves.push(node); return; }
             collect(node.children[0]);
             collect(node.children[1]);
           })(root);
           const leafY = new Map();
-          leaves.forEach((l,i)=> leafY.set(l.id, i));
-          (function assign(node){
-            if(!node.children){
-              node.x = 0;
-              node.y = leafY.get(node.id);
-              return node;
-            }
+          leaves.forEach((l, i) => leafY.set(l.id, i));
+          (function assign(node) {
+            if (!node.children) { node.x = 0; node.y = leafY.get(node.id); return node; }
             const left = assign(node.children[0]);
             const right = assign(node.children[1]);
             node.x = node.height;
-            node.y = (left.y + right.y)/2;
+            node.y = (left.y + right.y) / 2;
             return node;
           })(root);
           let maxH = 0;
-          (function traverse(n){ if(n.height>maxH) maxH=n.height; if(n.children){ traverse(n.children[0]); traverse(n.children[1]); } })(root);
-          if(maxH===0) maxH = 1;
+          (function traverse(n) {
+            if (n.height > maxH) maxH = n.height;
+            if (n.children) { traverse(n.children[0]); traverse(n.children[1]); }
+          })(root);
+          if (maxH === 0) maxH = 1;
           return { root, leaves, maxH };
         }
 
-        function collectMerges(node, merges = []){
-          if(!node.children) return merges;
+        function collectMerges(node, merges = []) {
+          if (!node.children) return merges;
           merges.push({ node, height: node.height });
           collectMerges(node.children[0], merges);
           collectMerges(node.children[1], merges);
           return merges;
         }
-
-        function cutTree(root, k){
-          const merges = collectMerges(root).sort((a,b)=>b.height - a.height);
-          if(k<=1) return [root];
+        function cutTree(root, k) {
+          const merges = collectMerges(root).sort((a, b) => b.height - a.height);
+          if (k <= 1) return [root];
           const leaves = [];
-          (function collectLeaves(n){ if(!n.children) leaves.push(n); else { collectLeaves(n.children[0]); collectLeaves(n.children[1]); } })(root);
-          if(k >= leaves.length) return leaves;
+          (function collectLeaves(n) { if (!n.children) leaves.push(n); else { collectLeaves(n.children[0]); collectLeaves(n.children[1]); } })(root);
+          if (k >= leaves.length) return leaves;
           let clusters = [root];
           let i = 0;
-          while(clusters.length < k && i < merges.length){
+          while (clusters.length < k && i < merges.length) {
             const target = merges[i].node;
             const idx = clusters.findIndex(c => c === target);
-            if(idx !== -1 && target.children){
+            if (idx !== -1 && target.children) {
               clusters.splice(idx, 1, target.children[0], target.children[1]);
             }
             i++;
           }
           let j = 0;
-          while(clusters.length < k && j < clusters.length){
-            if(clusters[j].children){
+          while (clusters.length < k && j < clusters.length) {
+            if (clusters[j].children) {
               const t = clusters[j];
-              clusters.splice(j,1,t.children[0],t.children[1]);
+              clusters.splice(j, 1, t.children[0], t.children[1]);
             }
             j++;
           }
-          return clusters.slice(0,k);
+          return clusters.slice(0, k);
         }
-
-        function assignClusterIds(root, clusters){
+        function assignClusterIds(root, clusters) {
           const assign = {};
-          clusters.forEach((c, ci)=>{
-            (function mark(n){
-              if(!n.children){
-                assign[n.id] = ci;
-                return;
-              }
+          clusters.forEach((c, ci) => {
+            (function mark(n) {
+              if (!n.children) { assign[n.id] = ci; return; }
               mark(n.children[0]);
               mark(n.children[1]);
             })(c);
           });
           return assign;
         }
-
-        function getColor(i){
+        function getColor(i) {
           const palette = [
             '#1f77b4','#ff7f0e','#2ca02c','#d62728','#9467bd','#8c564b','#e377c2',
             '#7f7f7f','#bcbd22','#17becf','#a6cee3','#b2df8a','#fb9a99','#fdbf6f','#cab2d6'
           ];
           return palette[i % palette.length];
         }
-
+        // Compute a short label from most frequent categories in a cluster (based on feature sums).
         function computeClusterLabel(clusterNode, maxAttrs = 2) {
           const counts = new Array(featureNames.length).fill(0);
-
           (function collect(n) {
             if (!n.children) {
               n.members.forEach(mi => {
@@ -1303,60 +1298,54 @@
             collect(n.children[0]);
             collect(n.children[1]);
           })(clusterNode);
-
           const arr = featureNames.map((f, fi) => [f, counts[fi]])
-                                .filter(([f, c]) => c > 0)
-                                .sort((a, b) => b[1] - a[1]);
-
+            .filter(([, c]) => c > 0)
+            .sort((a, b) => b[1] - a[1]);
           if (arr.length === 0) return '—';
-          const top = arr.slice(0, maxAttrs).map(a => a[0]);
-          return top.join(', ');
+          return arr.slice(0, maxAttrs).map(a => a[0]).join(', ');
         }
 
-
         // draw function (uses clusterMap for badges)
-        function drawDendrogram(containerId, layout, items, clusterMap = {}, opts = {}){
+        function drawDendrogram(containerId, layout, items, clusterMap = {}, opts = {}) {
           const w = opts.width || cfg.width;
           const h = opts.height || Math.max(420, layout.leaves.length * cfg.heightPerLeaf);
-          const margin = {top:40,right:20,bottom:20,left:220};
+          const margin = { top: 40, right: 20, bottom: 20, left: 220 };
           const innerW = w - margin.left - margin.right;
           const innerH = h - margin.top - margin.bottom;
-
-          function xScale(height){ return margin.left + (height / layout.maxH) * innerW; }
-          function yScale(yIndex){ return margin.top + (yIndex / (layout.leaves.length-1 || 1)) * innerH; }
+          function xScale(height) { return margin.left + (height / layout.maxH) * innerW; }
+          function yScale(yIndex) { return margin.top + (yIndex / (layout.leaves.length - 1 || 1)) * innerH; }
 
           const container = document.getElementById(containerId);
           container.innerHTML = '';
           const svgNS = "http://www.w3.org/2000/svg";
-          const svg = document.createElementNS(svgNS,'svg');
+          const svg = document.createElementNS(svgNS, 'svg');
           svg.setAttribute('width', w);
           svg.setAttribute('height', h);
           container.appendChild(svg);
 
-          function drawLinks(node){
-            if(!node.children) return;
+          function drawLinks(node) {
+            if (!node.children) return;
             const left = node.children[0];
             const right = node.children[1];
             const x = xScale(node.x);
             const xl = xScale(left.x);
             const xr = xScale(right.x);
-            const y = yScale(node.y);
             const yl = yScale(left.y);
             const yr = yScale(right.y);
 
             const hlineL = document.createElementNS(svgNS, 'path');
             hlineL.setAttribute('d', `M ${xl} ${yl} H ${x}`);
-            hlineL.setAttribute('class','link');
+            hlineL.setAttribute('class', 'link');
             svg.appendChild(hlineL);
 
             const hlineR = document.createElementNS(svgNS, 'path');
             hlineR.setAttribute('d', `M ${xr} ${yr} H ${x}`);
-            hlineR.setAttribute('class','link');
+            hlineR.setAttribute('class', 'link');
             svg.appendChild(hlineR);
 
             const vline = document.createElementNS(svgNS, 'path');
             vline.setAttribute('d', `M ${x} ${yl} V ${yr}`);
-            vline.setAttribute('class','link');
+            vline.setAttribute('class', 'link');
             svg.appendChild(vline);
 
             drawLinks(left);
@@ -1365,54 +1354,51 @@
           drawLinks(layout.root);
 
           layout.leaves.forEach(leaf => {
-          const y = yScale(leaf.y);
-          const x = margin.left - 12;
-          const g = document.createElementNS(svgNS,'g');
-          g.setAttribute('class','node');
-          const text = document.createElementNS(svgNS,'text');
-          const cid = clusterMap[leaf.id];
-          text.setAttribute('x', x);
-          text.setAttribute('y', y + 4);
-          text.setAttribute('text-anchor','end');
-          text.textContent = leaf.name || items[leaf.members[0]].name;
-          if(typeof cid !== 'undefined'){
-            text.textContent = text.textContent + ` — C${cid+1}`;
-          }
-          if(typeof cid !== 'undefined'){
-            text.setAttribute('fill', getColor(cid));
-          } else {
-            text.setAttribute('fill','#000');
-          }
-          g.appendChild(text);
-          svg.appendChild(g);
+            const y = yScale(leaf.y);
+            const x = margin.left - 12;
+            const g = document.createElementNS(svgNS, 'g');
+            g.setAttribute('class', 'node');
+            const text = document.createElementNS(svgNS, 'text');
+            const cid = clusterMap[leaf.id];
+            text.setAttribute('x', x);
+            text.setAttribute('y', y + 4);
+            text.setAttribute('text-anchor', 'end');
+            text.textContent = leaf.name || items[leaf.members[0]].name;
+            if (typeof cid !== 'undefined') {
+              text.textContent = text.textContent + ` — C${cid + 1}`;
+              text.setAttribute('fill', getColor(cid));
+            } else {
+              text.setAttribute('fill', '#000');
+            }
+            g.appendChild(text);
+            svg.appendChild(g);
           });
 
           const ticks = 5;
-          for(let i=0;i<=ticks;i++){
-            const hx = margin.left + (i/ticks) * innerW;
-            const line = document.createElementNS(svgNS,'line');
+          for (let i = 0; i <= ticks; i++) {
+            const hx = margin.left + (i / ticks) * innerW;
+            const line = document.createElementNS(svgNS, 'line');
             line.setAttribute('x1', hx);
             line.setAttribute('x2', hx);
             line.setAttribute('y1', margin.top - 10);
             line.setAttribute('y2', margin.top - 2);
-            line.setAttribute('stroke','#6666ff');
-            line.setAttribute('stroke-width','1');
+            line.setAttribute('stroke', '#6666ff');
+            line.setAttribute('stroke-width', '1');
             svg.appendChild(line);
 
-            const label = document.createElementNS(svgNS,'text');
+            const label = document.createElementNS(svgNS, 'text');
             label.setAttribute('x', hx);
             label.setAttribute('y', margin.top - 14);
-            label.setAttribute('text-anchor','middle');
-            const val = Math.round((i/ticks)*layout.maxH*100)/100;
+            label.setAttribute('text-anchor', 'middle');
+            const val = Math.round((i / ticks) * layout.maxH * 100) / 100;
             label.textContent = val;
             svg.appendChild(label);
           }
-          
 
           // --- DRAW THRESHOLD LINE IF PROVIDED ---
-          if(typeof opts.thresholdX !== 'undefined'){
+          if (typeof opts.thresholdX !== 'undefined') {
             const tx = opts.thresholdX;
-            const thrLine = document.createElementNS(svgNS,'line');
+            const thrLine = document.createElementNS(svgNS, 'line');
             thrLine.setAttribute('x1', tx);
             thrLine.setAttribute('x2', tx);
             thrLine.setAttribute('y1', margin.top - 8);
@@ -1423,12 +1409,12 @@
             thrLine.setAttribute('opacity', '0.9');
             svg.appendChild(thrLine);
 
-            if(typeof opts.thresholdVal !== 'undefined'){
-              const tlabel = document.createElementNS(svgNS,'text');
+            if (typeof opts.thresholdVal !== 'undefined') {
+              const tlabel = document.createElementNS(svgNS, 'text');
               tlabel.setAttribute('x', tx + 6);
               tlabel.setAttribute('y', margin.top + 12);
-              tlabel.setAttribute('fill','#d62728');
-              tlabel.textContent = `Threshold: ${Math.round(opts.thresholdVal*100)/100}`;
+              tlabel.setAttribute('fill', '#d62728');
+              tlabel.textContent = `Threshold: ${Math.round(opts.thresholdVal * 100) / 100}`;
               svg.appendChild(tlabel);
             }
           }
@@ -1437,96 +1423,100 @@
         const kRange = document.getElementById('kRange');
         const kValue = document.getElementById('kValue');
         const linkageSelect = document.getElementById('linkageSelect');
+        const distSelect = document.getElementById('distSelect');
+        const labelNum = document.getElementById('labelNum');
 
-        function updateKMax(){
-          const tree = agglomerative(items, cfg.distanceFn, linkageSelect.value);
+        function updateKMax() {
+          const tree = agglomerative(items, cfg.distanceFn, linkageSelect ? linkageSelect.value : cfg.initialLinkage);
           const layout = layoutTree(tree);
           const maxK = layout.leaves.length;
-          kRange.max = maxK;
-          if(Number(kRange.value) > maxK) kRange.value = maxK;
-          kValue.textContent = kRange.value;
+          if (kRange) {
+            kRange.max = maxK;
+            if (Number(kRange.value) > maxK) kRange.value = maxK;
+          }
+          if (kValue && kRange) kValue.textContent = kRange.value;
         }
 
-        function render(linkage, k){
+        function render(linkage, k) {
           const tree = agglomerative(items, cfg.distanceFn, linkage);
           const layout = layoutTree(tree);
           const clusterRoots = cutTree(layout.root, k);
           const clusterMap = assignClusterIds(layout.root, clusterRoots);
 
           // threshold
-          const merges = collectMerges(layout.root).map(m=>m.height).sort((a,b)=>b-a);
+          const merges = collectMerges(layout.root).map(m => m.height).sort((a, b) => b - a);
           let thresholdVal = 0;
-          if(k <= 1){
+          if (k <= 1) {
             thresholdVal = layout.maxH;
-          } else if(k >= layout.leaves.length){
+          } else if (k >= layout.leaves.length) {
             thresholdVal = 0;
           } else {
-            const idx = Math.min(merges.length-1, k-2);
+            const idx = Math.min(merges.length - 1, k - 2);
             thresholdVal = merges[idx] || 0;
           }
-
           const w = cfg.width;
-          const margin = {top:40,right:20,bottom:20,left:220};
+          const margin = { top: 40, right: 20, bottom: 20, left: 220 };
           const innerW = w - margin.left - margin.right;
           const tx = margin.left + (thresholdVal / layout.maxH) * innerW;
-          
-          
+
           // legend
           const legend = document.getElementById('legend');
-          legend.innerHTML = '';
-          for(let i=0;i<clusterRoots.length;i++){
-            const sw = document.createElement('span');
-            sw.className = 'item';
-            const cb = document.createElement('span');
-            cb.className = 'colorbox';
-            cb.style.background = getColor(i);
-            sw.appendChild(cb);
+          if (legend) {
+            legend.innerHTML = '';
+            for (let i = 0; i < clusterRoots.length; i++) {
+              const sw = document.createElement('span');
+              sw.className = 'item';
+              const cb = document.createElement('span');
+              cb.className = 'colorbox';
+              cb.style.background = getColor(i);
+              sw.appendChild(cb);
 
-            const cnt = (function countLeaves(n){ if(!n.children) return 1; return countLeaves(n.children[0]) + countLeaves(n.children[1]); })(clusterRoots[i]);
-            const autoLabel = computeClusterLabel(clusterRoots[i], cfg.labelNum);
+              const cnt = (function countLeaves(n) { if (!n.children) return 1; return countLeaves(n.children[0]) + countLeaves(n.children[1]); })(clusterRoots[i]);
+              const autoLabel = computeClusterLabel(clusterRoots[i], cfg.labelNum);
+              const labelText = document.createElement('span');
+              labelText.textContent = `C${i + 1} (${cnt}) — ${autoLabel}`;
+              labelText.style.cursor = 'pointer';
+              labelText.title = 'Click to edit the cat. label';
+              sw.appendChild(labelText);
 
-            const labelText = document.createElement('span');
-            labelText.textContent = `C${i+1} (${cnt}) — ${autoLabel}`;
-            labelText.style.cursor = 'pointer';
-            labelText.title = 'Click to edit the cat. label';
-            sw.appendChild(labelText);
+              labelText.addEventListener('click', function onClick() {
+                const input = document.createElement('input');
+                input.type = 'text';
+                input.value = (labelText.textContent.split('—').slice(1).join('—') || autoLabel).trim();
+                input.className = 'editable-input';
+                input.style.minWidth = '100px';
+                function commit() {
+                  const newVal = input.value.trim() || autoLabel;
+                  labelText.textContent = `C${i + 1} (${cnt}) — ${newVal}`;
+                  labelText.addEventListener('click', onClick, { once: true });
+                  input.replaceWith(labelText);
+                }
+                function cancel() {
+                  labelText.addEventListener('click', onClick, { once: true });
+                  input.replaceWith(labelText);
+                }
+                sw.replaceChild(input, labelText);
+                input.focus();
+                input.select();
+                input.addEventListener('blur', commit, { once: true });
+                input.addEventListener('keydown', (ev) => {
+                  if (ev.key === 'Enter') input.blur();
+                  if (ev.key === 'Escape') { cancel(); }
+                });
+              }, { once: true });
 
-            labelText.addEventListener('click', function onClick(){
-              const input = document.createElement('input');
-              input.type = 'text';
-              input.value = (labelText.textContent.split('—').slice(1).join('—') || autoLabel).trim();
-              input.className = 'editable-input';
-              input.style.minWidth = '100px';
-              function commit(){
-                const newVal = input.value.trim() || autoLabel;
-                labelText.textContent = `C${i+1} (${cnt}) — ${newVal}`;
-                labelText.addEventListener('click', onClick, { once: true });
-                input.replaceWith(labelText);
-              }
-              function cancel(){
-                labelText.addEventListener('click', onClick, { once: true });
-                input.replaceWith(labelText);
-              }
-              sw.replaceChild(input, labelText);
-              input.focus();
-              input.select();
-              input.addEventListener('blur', commit, { once: true });
-              input.addEventListener('keydown', (ev)=>{
-                if(ev.key === 'Enter') input.blur();
-                if(ev.key === 'Escape') { cancel(); }
-              });
-            }, { once: true });
-
-            legend.appendChild(sw);
+              legend.appendChild(sw);
+            }
           }
 
           drawDendrogram(containerId, layout, items, clusterMap, {
             width: cfg.width,
-            height: Math.max(420, layout.leaves.length*cfg.heightPerLeaf),
+            height: Math.max(420, layout.leaves.length * cfg.heightPerLeaf),
             thresholdX: tx,
             thresholdVal: thresholdVal
           });
         }
+
 
         kRange.addEventListener('input', ()=>{
           kValue.textContent = kRange.value;
@@ -1569,8 +1559,10 @@
         kRange.value = Math.min(Number(kRange.max), cfg.initialK || Number(kRange.value));
         updateKMax();
         render(linkageSelect.value, Number(kRange.value));
+}
 
-      }
+
+
 
     </script>
   </body>
