@@ -24,7 +24,9 @@ Cardsort+ is a (friendly) soft fork of [Card Sort](https://github.com/indigane/c
 - Enables users to edit card content (then, the old content is shown as struck through).
 - Enables users to duplicate the cards (then they can sort the cards into several categories).
 - Adds an export button to export refined data provided in the analysis tool to a CSV (copied to the clipboard)
-- Adds a share button to generate a shareable URL with the current state of the analysis (copied to the clipboard). Ex.: [Shared Analysis URL](https://bmarne.codeberg.page/cardsortplus/analysis.html#eJxVkDFuwzAMRa9icNYJutUBOnUI2qBL4YGSflwjsmXQcovC0N0jKnDSQoNI8X3yUxsdWPxCT58bvcg6JA3pCBYydIojp1iC53kOoM7QB3oktgEVO7C13KMALXhSbplZuF8X6rLZ6BV8Vq6V6FwMQyF2Sen1DvhaVa3mCWPDk2_OIf5AtPSnn7nZq4KwwkLkVwcHdpd7ghCaI-YZ6r7lqRx19R0d-8ceesvgYqpdH8MkDe4rXqq502pvry1QuNyp9YQ-yqC7b7ub_dOyoTdMPML_w3K-At4Vc9Y=).
+- Adds a share button to generate a shareable URL with the current state of the categories’ refinement (copied to the clipboard). Ex.: [Shared Refinement URL](https://bmarne.codeberg.page/cardsortplus/analysis.html#eJxVkDFuwzAMRa9icNYJutUBOnUI2qBL4YGSflwjsmXQcovC0N0jKnDSQoNI8X3yUxsdWPxCT58bvcg6JA3pCBYydIojp1iC53kOoM7QB3oktgEVO7C13KMALXhSbplZuF8X6rLZ6BV8Vq6V6FwMQyF2Sen1DvhaVa3mCWPDk2_OIf5AtPSnn7nZq4KwwkLkVwcHdpd7ghCaI-YZ6r7lqRx19R0d-8ceesvgYqpdH8MkDe4rXqq502pvry1QuNyp9YQ-yqC7b7ub_dOyoTdMPML_w3K-At4Vc9Y=).
+- Early alpha stage: displays an interactive dendrogram, that shows automated clustering of the participants card spread (it can be exported as SVG image)  
+![Screenshot showing a dendrogram](./images/dendrogram.svg)
 
 ## Demo
 

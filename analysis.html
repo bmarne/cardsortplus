@@ -274,6 +274,57 @@
       button#redraw {display:none;}
       .legend-title * {display: inline}
       input#labelNum {width: 3em}
+      #processed input, ul {display: none;}    
+      #processed label {
+        position: relative;
+        display: inline-block;
+        cursor: pointer;
+      }
+      #processed label:after {
+            content: "↓";
+          display: inline-block;
+          margin-left: 0.2em;
+          margin-right: 0.2em;
+            background-color: #9c9cdf;
+          color: white;
+        width: 1em;
+        text-align: center;
+        border-radius: 4px;
+        font-weight: bold;
+      }
+      #processed input:checked~ul {display: block;}
+      #processed input:checked~label:after {content: "↑";}
+      #processed input:checked~ul {
+        border: 1px solid #cfcfff;
+        border-radius: 7px;
+        max-width: 60ch;
+        list-style: none;
+        padding: 0px;
+        padding-bottom: 1em;
+        margin-top: 10px;
+        transition: all 0.5s ease-out allow-discrete;
+      }
+      #processed ul>li {
+        text-align: center;
+      }
+      #processed ul>li:hover {
+        background: #f2f2fd;
+      }
+    
+    #processed ul:before {
+      content: '';
+            position: relative;
+            display: block;
+      top: -9px;
+      left: 50%;
+      transform: translateX(-50%);
+            
+      width: 0;
+      height: 0;
+      border-left: 5px solid transparent;
+      border-right: 5px solid transparent;
+      border-bottom: 8px solid #cfcfff;
+    }
     </style>
   </head>
   <body>
@@ -285,6 +336,7 @@
         <label for="results-input">Paste one or more results below to add them</label>
       </div>
       <textarea id="results-input"></textarea>
+      <div id="processed"></div>
     </div>
     <div id="category-refinement" class="category-refinement">
       <style class="similarity-hover-effect-stylesheet"></style>
@@ -292,6 +344,7 @@
         <h2>Category refinement</h2>
         <button>🤖 Auto-merge</button>
         <button class="button-recalculate" disabled>👇 Apply changes</button>
+        <button class="btn-share-result">🔗 Share refinement</button>
         <label for="similarity-hover-effect-toggle">
           <input type="checkbox" id="similarity-hover-effect-toggle" />
           Similarity highlight on hover
@@ -302,8 +355,7 @@
     <div id="associations" class="associations">
       <div class="title-bar">
         <h2>Category&ndash;card table</h2>
-        <button class="btn-share-result">🔗 Share result</button>
-        <button class="btn-export-result">📦 Export result</button>
+        <button class="btn-export-result">📦 Export result (CSV)</button>
       </div>
       <table class="association-table"></table>
     </div>
@@ -383,6 +435,7 @@
       buttonExportResult.addEventListener('click', exportResult);
       const buttonShareResult = document.querySelector('.btn-share-result');
       buttonShareResult.addEventListener('click', shareResult);
+      var buttonExportAll;
       var csv = "";
       async function handleResultsInput() {
         const text = resultsInput.value;
@@ -436,9 +489,36 @@
         loadedResults = uniqueResults;
         calculateAndRender();
       }
+      async function reportProcessed(loadedResults = []) {
+        if (loadedResults.length > 0) {
+            const report = document.getElementById("processed");
+            report.innerHTML = 'Currently being processed below: <input id="dropreport" type="checkbox" name="DropReport" /><label for="dropreport">'+loadedResults.length.toString()+' <span>spreads</span></label>';
+            let p = 0;
+            let list ="<ul>";
+            for (const e of loadedResults) {
+              const catNum = Object.keys(e).length;
+              const countCard = Object.values(e).reduce((accumulator, currentArray) => {
+                return accumulator + currentArray.length;
+              }, 0);
+              const dataString = await saveToString(e);
+              const baseUrl = window.location.href.replace(regexRemoveBasenameFromUrl, '/');
+              const url = baseUrl + 'card-sort.html#' + dataString;
+              p++
+              list += "<li>Spread #"+p.toString()+" ("+countCard.toString()+" Cards in "+catNum.toString()+" Categories) <a href='"+url.toString()+"'>🔗 Show spread page</a></li>";
+
+            }
+            report.insertAdjacentHTML("beforeend",list+"</ul> <button id='exportall'>📦 Export all data (JSON)</button>");
+            buttonExportAll = document.querySelector('#exportall');
+            buttonExportAll.addEventListener('click', exportAll);
+              }
+        return;
+      }
+
 
       function calculateAndRender() {
         const data = combineResults(loadedResults);
+
+        reportProcessed(loadedResults);
 
         calculateCategorySimilarities(data);
         calculateCardSimilarities(data);
@@ -895,9 +975,28 @@
           }, 5000);
         }
         else {
+          prompt('Your browser does not support clipboard. You may try copying the content from below.', tableCSV);
+        }
+      }
+
+      function exportAll() {
+        if (navigator.clipboard) {
+        // Slice removes {} from the json to provide content compatible with import function
+        let serializedData = JSON.stringify(loadedResults, null, 2).slice(1,-1);
+        if (navigator.clipboard) {
+          navigator.clipboard.writeText(serializedData);
+          const originalText = buttonExportAll.textContent;
+          buttonExportAll.textContent = '📋 Data copied to clipboard';
+          clearTimeout(buttonExportAll._textTimeout);
+          buttonExportAll._textTimeout = setTimeout(() => {
+            buttonExportAll.textContent = originalText;
+          }, 5000);
+        }
+        else {
           prompt('Your browser does not support clipboard. You may try copying the content from below.', serializedData);
         }
       }
+    }
       
       async function shareResult() {
         let sharedData = {};
