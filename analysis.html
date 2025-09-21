@@ -274,7 +274,7 @@
       button#redraw {display:none;}
       .legend-title * {display: inline}
       input#labelNum {width: 3em}
-      #processed input, ul {display: none;}    
+      #processed input, ul {display: none;}
       #processed label {
         position: relative;
         display: inline-block;
@@ -310,7 +310,7 @@
       #processed ul>li:hover {
         background: #f2f2fd;
       }
-    
+
     #processed ul:before {
       content: '';
             position: relative;
@@ -318,7 +318,7 @@
       top: -9px;
       left: 50%;
       transform: translateX(-50%);
-            
+
       width: 0;
       height: 0;
       border-left: 5px solid transparent;
@@ -500,7 +500,10 @@
               const countCard = Object.values(e).reduce((accumulator, currentArray) => {
                 return accumulator + currentArray.length;
               }, 0);
-              const dataString = await saveToString(e);
+              // We need to add an empty # category object for card-sort.html
+              // '#' category is the initial cat for all cards
+              const tmp = e;
+              const dataString = await saveToString(Object.assign({"#":[]},tmp));
               const baseUrl = window.location.href.replace(regexRemoveBasenameFromUrl, '/');
               const url = baseUrl + 'card-sort.html#' + dataString;
               p++
